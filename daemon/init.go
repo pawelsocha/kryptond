@@ -1,14 +1,20 @@
-package deamon
+package daemon
 
-import "flag"
+import (
+	"flag"
+
+	Log "github.com/pawelsocha/kryptond/logging"
+)
 
 var (
+	Verbose    bool = false
 	ConfigFile string
-	LogLevel   string
 )
 
 func init() {
+	flag.BoolVar(&Verbose, "v", false, "Logging verbosity")
 	flag.StringVar(&ConfigFile, "config", "/etc/lms/lms.ini", "Path to lms config file")
-	flag.StringVar(&LogLevel, "loglevel", "INFO", "Logging verbosity")
 	flag.Parse()
+
+	Log.SetLogLevel(Verbose)
 }
