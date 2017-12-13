@@ -1,14 +1,22 @@
 package logging
 
 import (
+	"flag"
 	"os"
 
 	logging "github.com/op/go-logging"
 )
 
-var Log = logging.MustGetLogger("")
+var (
+	Verbose bool            = false
+	Log     *logging.Logger = logging.MustGetLogger("")
+)
 
-func SetLogLevel(verbose bool) {
+func init() {
+	flag.BoolVar(&Verbose, "v", false, "Logging verbosity")
+}
+
+func SetLogLevel() {
 	console := logging.NewLogBackend(os.Stdout, "", 0)
 	formated := logging.NewBackendFormatter(
 		console,
@@ -17,7 +25,7 @@ func SetLogLevel(verbose bool) {
 	leveled := logging.AddModuleLevel(formated)
 	leveled.SetLevel(logging.INFO, "")
 
-	if verbose {
+	if Verbose {
 		leveled.SetLevel(logging.DEBUG, "")
 	}
 	Log.SetBackend(leveled)
