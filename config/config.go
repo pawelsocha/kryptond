@@ -2,11 +2,14 @@ package config
 
 import (
 	"fmt"
-	"github.com/go-ini/ini"
 	"os"
+
+	"github.com/go-ini/ini"
 )
 
 // Config represent project configuration
+var C *Config
+
 type Config struct {
 	Database struct {
 		Type     string `ini:"type"`
@@ -27,6 +30,7 @@ type Config struct {
 // New create config struct with data from ini file
 func New(filename string) (*Config, error) {
 	c := &Config{}
+	C = c
 	if err := c.ReadConfig(filename); err != nil {
 		return nil, err
 	}

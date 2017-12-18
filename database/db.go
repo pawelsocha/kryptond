@@ -2,20 +2,30 @@ package database
 
 import (
 	"github.com/jinzhu/gorm"
+	//mysql
 	_ "github.com/jinzhu/gorm/dialects/mysql"
+	"github.com/pawelsocha/kryptond/config"
 )
 
-// DbConn database connection
-var DB *gorm.DB
+// SqlStorage struct to keep database connection
+type SqlStorage struct {
+	Connection *gorm.DB
+	Error      error
+}
 
-// Connect open new session with database
-func Connect(uri string) error {
+// Database open new session with database
+func Database(cfg *config.Config) *SqlStorage {
 	var err error
-	DB, err = gorm.Open("mysql", uri)
-	return err
+	db := new(SqlStorage)
+	db.Error = nil
+	db.Connection, err = gorm.Open("mysql", cfg.GetDatabaseDSN())
+	if err != nil {
+		db.Error = err
+	}
+	return db
 }
 
 // Disconnect close session with database
-func Disconnect() {
-	DB.Close()
+func (db *SqlStorage) Disconnect() {
+	db.Connection.Close()
 }

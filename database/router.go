@@ -12,7 +12,11 @@ type Routers []Router
 
 // GetRoutersList get from database list of a router to configure.
 // All router must be Konfiguracja/Configuration type
-func GetRoutersList() (*Routers, error) {
+func (db *SqlStorage) GetRoutersList() (*Routers, error) {
+	if db.Error != nil {
+		return nil, db.Error
+	}
+
 	query := `SELECT n.name, 
 	    			 INET_NTOA(n.ipaddr) priv, 
 	    			 INET_NTOA(n.ipaddr_pub) public
@@ -22,7 +26,8 @@ func GetRoutersList() (*Routers, error) {
 		       WHERE t.name='Konfiguracja'
 			 	 AND n.ownerid=0`
 
+	defer db.Disconnect()
 	var ret = new(Routers)
-	err := Db.Raw(query).Find(ret).Error
-	return ret, err
+	db.Error = db.Connection.Raw(query).Find(ret).Error
+	return ret, db.Error
 }
