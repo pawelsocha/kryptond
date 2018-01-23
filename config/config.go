@@ -8,7 +8,7 @@ import (
 )
 
 // Config represent project configuration
-var C *Config
+var Cfg *Config
 
 type Config struct {
 	Database struct {
@@ -30,11 +30,11 @@ type Config struct {
 // New create config struct with data from ini file
 func New(filename string) (*Config, error) {
 	c := &Config{}
-	C = c
 	if err := c.ReadConfig(filename); err != nil {
 		return nil, err
 	}
 
+	Cfg = c
 	return c, nil
 }
 
