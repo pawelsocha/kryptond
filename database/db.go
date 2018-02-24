@@ -7,25 +7,25 @@ import (
 	"github.com/pawelsocha/kryptond/config"
 )
 
-// SqlStorage struct to keep database connection
-type SqlStorage struct {
+// SQLStorage struct to keep database connection
+type SQLStorage struct {
 	Connection *gorm.DB
 	Error      error
 }
 
 // Database open new session with database
-func Database(cfg *config.Config) *SqlStorage {
+func Database(cfg *config.Config) (*SQLStorage, error) {
 	var err error
-	db := new(SqlStorage)
+	db := new(SQLStorage)
 	db.Error = nil
 	db.Connection, err = gorm.Open("mysql", cfg.GetDatabaseDSN())
 	if err != nil {
 		db.Error = err
 	}
-	return db
+	return db, err
 }
 
 // Disconnect close session with database
-func (db *SqlStorage) Disconnect() {
+func (db *SQLStorage) Disconnect() {
 	db.Connection.Close()
 }
