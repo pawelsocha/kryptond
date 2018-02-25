@@ -2,7 +2,6 @@ package mikrotik
 
 import (
 	. "github.com/pawelsocha/kryptond/logging"
-	routeros "github.com/pawelsocha/routeros"
 )
 
 type Workers struct {
@@ -26,13 +25,13 @@ func (w *Workers) AddNewDevice(host string) (*Device, error) {
 	return device, nil
 }
 
-func (w *Workers) ExecuteCommand(cmd string, result chan *routeros.Reply) {
+func (w *Workers) ExecuteCommand(cmd string, result chan Result) {
 	for host, device := range w.nodes {
 		task := Task{
 			Command: cmd,
 			Result:  result,
 		}
-		j := device.Task()
+		j := device.TaskChan()
 		Log.Debugf("sending job %v to %s", task.Command, host)
 
 		j <- task
