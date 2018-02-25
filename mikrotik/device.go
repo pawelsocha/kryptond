@@ -8,7 +8,7 @@ import (
 
 	"github.com/pawelsocha/kryptond/config"
 	. "github.com/pawelsocha/kryptond/logging"
-	routeros "github.com/pawelsocha/routeros"
+	"github.com/pawelsocha/routeros"
 )
 
 // Device structure to describe a routeros api instance
@@ -46,6 +46,7 @@ func NewDevice(host string) (*Device, error) {
 	return mk, nil
 }
 
+//Execute wrapper to routeros RunArgs command
 func (device *Device) Execute(cmds ...string) (*routeros.Reply, error) {
 	return device.Conn.RunArgs(cmds)
 }
@@ -56,11 +57,12 @@ func (device *Device) executeTask(task Task) {
 
 	if err != nil {
 		Log.Errorf("Can't execute %s on %s. Error: %s", task.Command, device.Host, err)
-		task.Result <- nil
-		return
 	}
 
-	task.Result <- ret
+	task.Result <- Result{
+		Reply: *ret,
+		Error: err,
+	}
 }
 
 //Run execute command asynchronously
@@ -83,7 +85,7 @@ func (device *Device) Run() {
 }
 
 //Task return task channel
-func (device *Device) Task() chan Task {
+func (device *Device) TaskChan() chan Task {
 	return device.Job
 }
 

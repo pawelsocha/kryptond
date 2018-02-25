@@ -62,7 +62,7 @@ func (c *Config) ReadConfig(filename string) error {
 
 // GetDatabaseDSN prepare database connection uri using data from INI file.
 func (c Config) GetDatabaseDSN() string {
-	return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?timeout=10s",
+	return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?timeout=10s&parseTime=True",
 		c.Database.User,
 		c.Database.Password,
 		c.Database.Host,
