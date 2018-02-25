@@ -2,18 +2,22 @@ package client
 
 import (
 	"encoding/binary"
+	"fmt"
 	"net"
+
+	"github.com/pawelsocha/kryptond/config"
+	"github.com/pawelsocha/kryptond/database"
 )
 
 type Session struct {
 	CustomerId int64  `gorm:"column:customerid"`
 	NodeId     int64  `gorm:"column:nodeid"`
-	IP         int64  `gorm:"column:ipaddr"`
+	IP         uint64 `gorm:"column:ipaddr"`
 	Mac        string `gorm:"column:mac"`
-	Start      int64  `gorm:"column:start"`
-	Stop       int64  `gorm:"column:stop"`
-	Download   int64  `gorm:"column:download"`
-	Upload     int64  `gorm:"column:upload"`
+	Start      uint64 `gorm:"column:start"`
+	Stop       uint64 `gorm:"column:stop"`
+	Download   uint64 `gorm:"column:download"`
+	Upload     uint64 `gorm:"column:upload"`
 }
 
 func (s Session) TableName() string {
@@ -24,13 +28,16 @@ func (s *Session) SetIP(ip string) {
 	s.IP = binary.BigEndian.Uint64(net.ParseIP(ip))
 }
 
-func Store(s Session) error {
+func (s Session) Store(cfg *config.Config) error {
 	db, err := database.Database(cfg)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	defer db.Connection.Close()
 
-	return db.Connection.NewRecord(d)
+	if db.Connection.NewRecord(s) {
+		return nil
+	}
+	return fmt.Errorf("Can't create new session record")
 }

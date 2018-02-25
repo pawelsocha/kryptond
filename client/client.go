@@ -3,6 +3,7 @@ package client
 import (
 	"fmt"
 
+	"github.com/pawelsocha/kryptond/config"
 	"github.com/pawelsocha/kryptond/database"
 )
 
@@ -58,13 +59,16 @@ const (
 )
 
 //NewClient create client instance with rate limits and list of nodes
-func NewClient(CustomerID int64, db *database.SQLStorage) (*Client, error) {
-	if db.Error != nil {
-		return nil, db.Error
+func NewClient(CustomerID int64, cfg *config.Config) (*Client, error) {
+	db, err := database.Database(cfg)
+	if err != nil {
+		return nil, err
 	}
 
+	defer db.Disconnect()
+
 	var rate Ratelimit
-	err := db.Connection.Raw(rateLimits, CustomerID).Find(&rate).Error
+	err = db.Connection.Raw(rateLimits, CustomerID).Find(&rate).Error
 	if err != nil {
 		return nil, err
 	}
@@ -87,10 +91,10 @@ func NewClient(CustomerID int64, db *database.SQLStorage) (*Client, error) {
 
 //String convert client struct to string
 func (c Client) String() string {
-	return fmt.Sprint("Client%d", c.ID)
+	return fmt.Sprint("Client%s", c.ID)
 }
 
 //Description returns client description for comment field in routeros
 func (c Client) Description() string {
-	return fmt.Sprint("Client:%d:%s", c.ID, c.Name)
+	return fmt.Sprint("Client:%s:%s", c.ID, c.Name)
 }

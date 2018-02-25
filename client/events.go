@@ -24,6 +24,17 @@ func (e Event) TableName() string {
 	return "kryptond_events"
 }
 
+func (e *Event) Save(cfg *config.Config) error {
+	//TODO: better db handling
+	db, err := database.Database(cfg)
+	if err != nil {
+		return err
+	}
+
+	defer db.Disconnect()
+	return db.Connection.Save(e).Error
+}
+
 type Events []Event
 
 func Subscribe(ctx context.Context, cfg *config.Config) {
@@ -47,7 +58,7 @@ func CheckEvents(cfg *config.Config) (Events, error) {
 		return nil, err
 	}
 
-	defer db.Connection.Close()
+	defer db.Disconnect()
 	var events Events
 	if err = db.Connection.Where("status = ?", "NEW").Find(&events).Error; err != nil {
 		return nil, err
