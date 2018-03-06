@@ -20,6 +20,7 @@ type Node struct {
 	Name     string `gorm:"column:name"`
 	Passwd   string `gorm:"column:passwd"`
 	IP       int64  `gorm:"column:ipaddr"`
+	Gateway  int64  `gorm:"column:gateway"`
 	Public   int64  `gorm:"column:ipaddr_pub"`
 	Auth     int64  `gorm:"column:authtype"`
 }
@@ -51,8 +52,10 @@ const (
            LEFT JOIN assignments a on (a.customerid=c.id)
            LEFT JOIN tariffs t on (t.id=a.tariffid)
 			   WHERE c.id = ?`
-	nodes = `SELECT name, ipaddr, ipaddr_pub, passwd, authtype, ownerid
+	nodes = `SELECT nodes.name, nodes.ipaddr, nodes.ipaddr_pub, networks.gateway,
+					nodes.passwd, nodes.authtype, nodes.ownerid
 		        FROM nodes
+		   LEFT JOIN networks ON (nodes.netid=networks.id)
 			   WHERE ownerid = ?`
 	clientname = `SELECT lastname, name FROM customers where id = ?`
 	byip       = ``
