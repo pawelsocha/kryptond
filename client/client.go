@@ -52,7 +52,8 @@ const (
            LEFT JOIN assignments a on (a.customerid=c.id)
            LEFT JOIN tariffs t on (t.id=a.tariffid)
 			   WHERE c.id = ?`
-	nodes = `SELECT nodes.name, nodes.ipaddr, nodes.ipaddr_pub, networks.gateway,
+	nodes = `SELECT nodes.name, nodes.ipaddr, nodes.ipaddr_pub, 
+					INET_ATON(networks.gateway) as gateway,
 					nodes.passwd, nodes.authtype, nodes.ownerid
 		        FROM nodes
 		   LEFT JOIN networks ON (nodes.netid=networks.id)
