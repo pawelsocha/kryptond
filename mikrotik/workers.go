@@ -5,12 +5,12 @@ import (
 )
 
 type Workers struct {
-	nodes map[string]*Device
+	Nodes map[string]*Device
 }
 
 func NewWorkers() *Workers {
 	return &Workers{
-		nodes: make(map[string]*Device),
+		Nodes: make(map[string]*Device),
 	}
 }
 
@@ -21,26 +21,32 @@ func (w *Workers) AddNewDevice(host string) (*Device, error) {
 		return nil, err
 	}
 	device.Run()
-	w.nodes[host] = device
+	w.Nodes[host] = device
 	return device, nil
 }
 
-func (w *Workers) ExecuteCommand(cmd string, result chan Result) {
-	for host, device := range w.nodes {
+func (w *Workers) Print(entity Entity, result chan *Result) {
+	w.sendCommand("print", entity, result)
+}
+
+func (w *Workers) Delete(entity Entity, result chan *Result) {
+	w.sendCommand("remove", entity, result)
+}
+
+func (w *Workers) Update(entity Entity, result chan *Result) {
+	w.sendCommand("update", entity, result)
+}
+
+func (w *Workers) sendCommand(action string, entity Entity, result chan *Result) {
+	for host, device := range w.Nodes {
 		task := Task{
-			Command: cmd,
-			Result:  result,
+			Action: action,
+			Entity: entity,
+			Result: result,
 		}
 		j := device.TaskChan()
-		Log.Debugf("sending job %v to %s", task.Command, host)
+		Log.Debugf("sending job %#v to %s", task.Entity, host)
 
 		j <- task
 	}
-}
-
-func (w *Workers) GetDevice(host string) *Device {
-	if i, ok := w.nodes[host]; ok {
-		return i
-	}
-	return nil
 }

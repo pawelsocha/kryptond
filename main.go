@@ -1,6 +1,8 @@
 package main
 
-import "github.com/pawelsocha/kryptond/daemon"
+import (
+	daemon "github.com/pawelsocha/kryptond/daemon"
+)
 
 func main() {
 	daemon.Main()

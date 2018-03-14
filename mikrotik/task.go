@@ -5,11 +5,12 @@ import (
 )
 
 type Result struct {
-	Reply routeros.Reply
+	Reply *routeros.Reply
 	Error error
 }
 
 type Task struct {
-	Command string
-	Result  chan Result
+	Action string
+	Entity Entity
+	Result chan *Result
 }

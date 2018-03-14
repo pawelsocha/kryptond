@@ -3,7 +3,6 @@ package mikrotik
 import (
 	"crypto/tls"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/pawelsocha/kryptond/config"
@@ -51,16 +50,35 @@ func (device *Device) Execute(cmds ...string) (*routeros.Reply, error) {
 	return device.Conn.RunArgs(cmds)
 }
 
-func (device *Device) executeTask(task Task) {
-	Log.Debugf("%s: Execute %s", device.Host, task.Command)
-	ret, err := device.Execute(strings.Split(task.Command, " ")...)
-
-	if err != nil {
-		Log.Errorf("Can't execute %s on %s. Error: %s", task.Command, device.Host, err)
+func (device *Device) ExecuteEntity(action string, entity Entity) (*routeros.Reply, error) {
+	var ret *routeros.Reply = nil
+	var err error
+	switch action {
+	case "print":
+		ret, err = device.Conn.Print(entity)
+	case "remove":
+		err = device.Conn.Remove(entity)
+	case "add":
+		err = device.Conn.Add(entity)
+	case "edit":
+		err = device.Conn.Edit(entity)
+	default:
+		err = fmt.Errorf("Uknown action %s", action)
 	}
 
-	task.Result <- Result{
-		Reply: *ret,
+	if err != nil {
+		Log.Errorf("Can't execute %#v on %s. Error: %s", entity, device.Host, err)
+	}
+
+	return ret, err
+}
+
+func (device *Device) executeTask(task Task) {
+	Log.Debugf("%s: Execute %s, Action: %s", device.Host, task.Entity.Path, task.Action)
+	ret, err := device.ExecuteEntity(task.Action, task.Entity)
+
+	task.Result <- &Result{
+		Reply: ret,
 		Error: err,
 	}
 }
@@ -74,7 +92,7 @@ func (device *Device) Run() {
 		for {
 			select {
 			case task := <-device.Job:
-				Log.Debugf("Got job %v", task.Command)
+				Log.Debugf("Got job %#v", task)
 				device.executeTask(task)
 			case <-device.done:
 				Log.Infof("%s: exiting", device.Host)

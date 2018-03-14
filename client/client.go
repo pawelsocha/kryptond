@@ -16,12 +16,13 @@ type Ratelimit struct {
 
 //Node computer connected to customer
 type Node struct {
+	ID       int64  `gorm:"column:id"`
 	ClientID int64  `gorm:"column:ownerid"`
 	Name     string `gorm:"column:name"`
 	Passwd   string `gorm:"column:passwd"`
-	IP       int64  `gorm:"column:ipaddr"`
-	Gateway  int64  `gorm:"column:gateway"`
-	Public   int64  `gorm:"column:ipaddr_pub"`
+	IP       string `gorm:"column:ipaddr"`
+	Gateway  string `gorm:"column:gateway"`
+	Public   string `gorm:"column:ipaddr_pub"`
 	Auth     int64  `gorm:"column:authtype"`
 }
 
@@ -42,8 +43,8 @@ type Nodes []Node
 type Client struct {
 	ID    int64
 	Name  string
-	Rate  *Ratelimit
-	Nodes *Nodes
+	Rate  Ratelimit
+	Nodes Nodes
 }
 
 const (
@@ -52,8 +53,9 @@ const (
            LEFT JOIN assignments a on (a.customerid=c.id)
            LEFT JOIN tariffs t on (t.id=a.tariffid)
 			   WHERE c.id = ?`
-	nodes = `SELECT nodes.name, nodes.ipaddr, nodes.ipaddr_pub, 
-					INET_ATON(networks.gateway) as gateway,
+	nodes = `SELECT nodes.id, nodes.name, INET_NTOA(nodes.ipaddr) as ipaddr,
+					INET_NTOA(nodes.ipaddr_pub) as ipaddr_pub, 
+					networks.gateway as gateway,
 					nodes.passwd, nodes.authtype, nodes.ownerid
 		        FROM nodes
 		   LEFT JOIN networks ON (nodes.netid=networks.id)
@@ -88,8 +90,8 @@ func NewClient(CustomerID int64, cfg *config.Config) (*Client, error) {
 	return &Client{
 		ID:    CustomerID,
 		Name:  name.String(),
-		Rate:  &rate,
-		Nodes: &clientNodes,
+		Rate:  rate,
+		Nodes: clientNodes,
 	}, nil
 }
 
