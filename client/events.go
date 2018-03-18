@@ -2,9 +2,9 @@ package client
 
 import (
 	"context"
+	"fmt"
 	"time"
 
-	"github.com/pawelsocha/kryptond/config"
 	"github.com/pawelsocha/kryptond/database"
 	. "github.com/pawelsocha/kryptond/logging"
 )
@@ -18,33 +18,37 @@ type Event struct {
 	Finish     time.Time `gorm:"column:finish"`
 	Operation  string    `gorm:"column:type"`
 	Table      string    `gorm:"column:source"`
+	Addr       uint32    `gorm:"column:addr"`
+	Addr_pub   uint32    `gorm:"column:addr_pub"`
 }
 
 func (e Event) TableName() string {
 	return "kryptond_events"
 }
 
-func (e *Event) Save(cfg *config.Config) error {
-	//TODO: better db handling
-	db, err := database.Database(cfg)
-	if err != nil {
-		return err
-	}
+func (e *Event) AddrNtoa() string {
+	return fmt.Sprintf("%d.%d.%d.%d",
+		byte(e.Addr>>24),
+		byte(e.Addr>>16),
+		byte(e.Addr>>8),
+		byte(e.Addr),
+	)
+}
 
-	defer db.Disconnect()
-	return db.Connection.Save(e).Error
+func (e *Event) Save() error {
+	return database.Connection.Save(e).Error
 }
 
 type Events []Event
 
-func Subscribe(ctx context.Context, cfg *config.Config) {
+func Subscribe(ctx context.Context) {
 	go func() {
 		for {
 			select {
 			case <-ctx.Done():
 				return
 			case <-time.After(time.Second * 60):
-				e, err := CheckEvents(cfg)
+				e, err := CheckEvents()
 				Log.Infof("event: %v, err: %s", e, err)
 				return
 			}
@@ -52,19 +56,13 @@ func Subscribe(ctx context.Context, cfg *config.Config) {
 	}()
 }
 
-func CheckEvents(cfg *config.Config) (Events, error) {
-	db, err := database.Database(cfg)
-	if err != nil {
-		return nil, err
-	}
-
-	defer db.Disconnect()
+func CheckEvents() (Events, error) {
 	var events Events
-	if err = db.Connection.Where("status = ?", "NEW").Find(&events).Error; err != nil {
+	if err := database.Connection.Where("status = ?", "NEW").Where("customerid > 0").Find(&events).Error; err != nil {
 		return nil, err
 	}
 
-	err = db.Connection.Table("kryptond_events").Where("status = ?", "NEW").Updates(map[string]interface{}{"status": "RUNNING"}).Error
+	err := database.Connection.Table("kryptond_events").Where("status = ?", "NEW").Updates(map[string]interface{}{"status": "RUNNING"}).Error
 	if err != nil {
 		return nil, err
 	}

@@ -37,6 +37,13 @@ func (w *Workers) Update(entity Entity, result chan *Result) {
 	w.sendCommand("update", entity, result)
 }
 
+func (w *Workers) GetDevice(host string) *Device {
+	if device, ok := w.Nodes[host]; ok {
+		return device
+	}
+	return nil
+}
+
 func (w *Workers) sendCommand(action string, entity Entity, result chan *Result) {
 	for host, device := range w.Nodes {
 		task := Task{

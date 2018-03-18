@@ -3,7 +3,6 @@ package client
 import (
 	"fmt"
 
-	"github.com/pawelsocha/kryptond/config"
 	"github.com/pawelsocha/kryptond/database"
 )
 
@@ -65,28 +64,21 @@ const (
 )
 
 //NewClient create client instance with rate limits and list of nodes
-func NewClient(CustomerID int64, cfg *config.Config) (*Client, error) {
-	db, err := database.Database(cfg)
-	if err != nil {
-		return nil, err
-	}
-
-	defer db.Disconnect()
-
+func NewClient(CustomerID int64) (*Client, error) {
 	var rate Ratelimit
-	err = db.Connection.Raw(rateLimits, CustomerID).Find(&rate).Error
+	err := database.Connection.Raw(rateLimits, CustomerID).Find(&rate).Error
 	if err != nil {
 		return nil, err
 	}
 
 	var clientNodes Nodes
-	err = db.Connection.Raw(nodes, CustomerID).Find(&clientNodes).Error
+	err = database.Connection.Raw(nodes, CustomerID).Find(&clientNodes).Error
 	if err != nil {
 		return nil, err
 	}
 
 	var name Name
-	err = db.Connection.Raw(clientname, CustomerID).First(&name).Error
+	err = database.Connection.Raw(clientname, CustomerID).First(&name).Error
 	return &Client{
 		ID:    CustomerID,
 		Name:  name.String(),

@@ -5,14 +5,13 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/pawelsocha/kryptond/config"
 	"github.com/pawelsocha/kryptond/database"
 )
 
 type Session struct {
 	CustomerId int64  `gorm:"column:customerid"`
 	NodeId     int64  `gorm:"column:nodeid"`
-	IP         uint64 `gorm:"column:ipaddr"`
+	IP         uint32 `gorm:"column:ipaddr"`
 	Mac        string `gorm:"column:mac"`
 	Start      uint64 `gorm:"column:start"`
 	Stop       uint64 `gorm:"column:stop"`
@@ -25,18 +24,11 @@ func (s Session) TableName() string {
 }
 
 func (s *Session) SetIP(ip string) {
-	s.IP = binary.BigEndian.Uint64(net.ParseIP(ip))
+	s.IP = binary.BigEndian.Uint32(net.ParseIP(ip))
 }
 
-func (s Session) Store(cfg *config.Config) error {
-	db, err := database.Database(cfg)
-	if err != nil {
-		return err
-	}
-
-	defer db.Connection.Close()
-
-	if db.Connection.NewRecord(s) {
+func (s Session) Save() error {
+	if database.Connection.NewRecord(s) {
 		return nil
 	}
 	return fmt.Errorf("Can't create new session record")
