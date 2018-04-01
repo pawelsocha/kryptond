@@ -2,7 +2,6 @@ package client
 
 import (
 	"encoding/binary"
-	"fmt"
 	"net"
 
 	"github.com/pawelsocha/kryptond/database"
@@ -28,8 +27,5 @@ func (s *Session) SetIP(ip string) {
 }
 
 func (s Session) Save() error {
-	if database.Connection.NewRecord(s) {
-		return nil
-	}
-	return fmt.Errorf("Can't create new session record")
+	return database.Connection.Create(s).Error
 }

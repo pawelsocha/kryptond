@@ -31,6 +31,10 @@ func (q Queue) Path() string {
 	return fmt.Sprintf("/queue/simple")
 }
 
+func (q Queue) PrintAttrs() string {
+	return ""
+}
+
 type Secret struct {
 	ID       string `routeros:".id"`
 	Name     string `routeros:"name"`
@@ -53,6 +57,10 @@ func (q Secret) Path() string {
 	return fmt.Sprintf("/ppp/secret")
 }
 
+func (q Secret) PrintAttrs() string {
+	return ""
+}
+
 type Arp struct {
 	Mac     string `routeros:"mac-address"`
 	Address string `routeros:"address"`
@@ -68,4 +76,8 @@ func (a Arp) Where() string {
 
 func (a Arp) Path() string {
 	return fmt.Sprintf("/ip/arp")
+}
+
+func (q Arp) PrintAttrs() string {
+	return ""
 }
