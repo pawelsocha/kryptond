@@ -23,6 +23,8 @@ type Node struct {
 	Gateway  string `gorm:"column:gateway"`
 	Public   string `gorm:"column:ipaddr_pub"`
 	Auth     int64  `gorm:"column:authtype"`
+	Access   int    `gorm:"column:access"`
+	Warning  int    `gorm:"column:warning"`
 }
 
 //Name customer name
@@ -51,11 +53,12 @@ const (
 		        FROM customers c
            LEFT JOIN assignments a on (a.customerid=c.id)
            LEFT JOIN tariffs t on (t.id=a.tariffid)
-			   WHERE c.id = ?`
+			   WHERE c.id = ? and a.suspended=0`
 	nodes = `SELECT nodes.id, nodes.name, INET_NTOA(nodes.ipaddr) as ipaddr,
 					INET_NTOA(nodes.ipaddr_pub) as ipaddr_pub, 
 					networks.gateway as gateway,
-					nodes.passwd, nodes.authtype, nodes.ownerid
+					nodes.passwd, nodes.authtype, nodes.ownerid,
+					nodes.access, nodes.warning
 		        FROM nodes
 		   LEFT JOIN networks ON (nodes.netid=networks.id)
 			   WHERE ownerid = ?`
@@ -69,6 +72,14 @@ func NewClient(CustomerID int64) (*Client, error) {
 	err := database.Connection.Raw(rateLimits, CustomerID).Find(&rate).Error
 	if err != nil {
 		return nil, err
+	}
+
+	if rate.Downceil == 0 {
+		rate.Downceil = 256
+	}
+
+	if rate.Upceil == 0 {
+		rate.Downceil = 256
 	}
 
 	var clientNodes Nodes

@@ -12,10 +12,11 @@ import (
 
 // Device structure to describe a routeros api instance
 type Device struct {
-	Host string
-	Conn *routeros.Client
-	Job  chan Task
-	done chan bool
+	Host      string
+	Community string
+	Conn      *routeros.Client
+	Job       chan Task
+	done      chan bool
 }
 
 // NewDevice create routeros api client
@@ -53,6 +54,7 @@ func (device *Device) Execute(cmds ...string) (*routeros.Reply, error) {
 func (device *Device) ExecuteEntity(action string, entity Entity) (*routeros.Reply, error) {
 	var ret *routeros.Reply = nil
 	var err error
+
 	switch action {
 	case "print":
 		ret, err = device.Conn.Print(entity)

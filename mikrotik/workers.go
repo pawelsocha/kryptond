@@ -2,6 +2,7 @@ package mikrotik
 
 import (
 	. "github.com/pawelsocha/kryptond/logging"
+	"github.com/pawelsocha/kryptond/router"
 )
 
 type Workers struct {
@@ -14,14 +15,22 @@ func NewWorkers() *Workers {
 	}
 }
 
-func (w *Workers) AddNewDevice(host string) (*Device, error) {
-	device, err := NewDevice(host)
+func (w *Workers) AddNewDevice(r router.Router) (*Device, error) {
+
+	ip := r.PrivateAddress
+	if r.PublicAddress != "" && r.PublicAddress != "0.0.0.0" {
+		ip = r.PublicAddress
+	}
+
+	device, err := NewDevice(ip)
 	if err != nil {
-		Log.Errorf("Can't create routeros device for host %s. Error: %s", host, err)
+		Log.Errorf("Can't create routeros device for host %s. Error: %s", ip, err)
 		return nil, err
 	}
 	device.Run()
-	w.Nodes[host] = device
+	device.Community = r.Community
+
+	w.Nodes[ip] = device
 	return device, nil
 }
 

@@ -27,11 +27,17 @@ func (e Event) TableName() string {
 }
 
 func (e *Event) AddrNtoa() string {
+	var ip uint32 = e.Addr
+
+	if e.Addr_pub > 0 {
+		ip = e.Addr_pub
+	}
+
 	return fmt.Sprintf("%d.%d.%d.%d",
-		byte(e.Addr>>24),
-		byte(e.Addr>>16),
-		byte(e.Addr>>8),
-		byte(e.Addr),
+		byte(ip>>24),
+		byte(ip>>16),
+		byte(ip>>8),
+		byte(ip),
 	)
 }
 

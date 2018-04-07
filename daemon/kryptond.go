@@ -41,16 +41,16 @@ func Main() {
 	}
 
 	for _, device := range routers {
-		Log.Debugf("Add router %s", device.PrivateAddress)
-		_, err := workers.AddNewDevice(device.PrivateAddress)
-		if err != nil {
+		Log.Debugf("Add router %#v", device)
+		if _, err := workers.AddNewDevice(device); err != nil {
 			Log.Critical("Can't connect with router. Error: ", err)
 			return
 		}
 	}
+
 	for {
 		select {
-		case <-time.After(time.Second * 60):
+		case <-time.After(time.Second * 15):
 
 			events, err := client.CheckEvents()
 			if err != nil {
@@ -61,6 +61,20 @@ func Main() {
 			for _, event := range events {
 				host := event.AddrNtoa()
 				device := workers.GetDevice(host)
+
+				if device == nil {
+					Log.Warningf("Got event %s for client %d with empty device.", event.Operation, event.CustomerId)
+					event.Status = "NODEV"
+					event.Save()
+					continue
+				}
+				if event.NodeId == 0 {
+					Log.Warningf("Got event %s for client %d with empty node id.", event.Operation, event.CustomerId)
+					event.Status = "NONODE"
+					event.Save()
+					continue
+				}
+
 				Log.Infof("Got event %s for client %d", event.Operation, event.CustomerId)
 				switch event.Operation {
 				case "CHANGE":
@@ -82,12 +96,29 @@ func Main() {
 }
 
 func processRemove(event *client.Event, device *mikrotik.Device) error {
+
+	client, err := client.NewClient(event.CustomerId)
+	if err != nil {
+		Log.Critical("Can't create new client. Error: ", err)
+		return err
+	}
+
+	if len(client.Nodes) == 0 {
+		return fmt.Errorf("Node is empty")
+	}
+
+	node := client.Nodes[0]
+
 	sid := mikrotik.Secret{
-		Name: fmt.Sprintf("Client:%d", event.CustomerId),
+		Name: fmt.Sprintf("%s", node.Name),
 	}
 
 	qid := mikrotik.Queue{
 		Name: fmt.Sprintf("Client:%d", event.CustomerId),
+	}
+
+	nid := mikrotik.Nat{
+		Comment: fmt.Sprintf("%s", node.Name),
 	}
 
 	ret, err := device.ExecuteEntity("print", qid)
@@ -107,12 +138,26 @@ func processRemove(event *client.Event, device *mikrotik.Device) error {
 
 	ret.Fetch(&sid)
 
+	ret, err = device.ExecuteEntity("print", nid)
+	if err != nil {
+		if err.Error() == "Id is empty." {
+			return nil
+		}
+		return fmt.Errorf("Nat get error")
+	}
+
+	ret.Fetch(&nid)
+
 	if _, err := device.ExecuteEntity("remove", qid); err != nil {
 		return fmt.Errorf("Queue remove error")
 	}
 
 	if _, err := device.ExecuteEntity("remove", sid); err != nil {
 		return fmt.Errorf("Secret remove error")
+	}
+
+	if _, err := device.ExecuteEntity("remove", nid); err != nil {
+		return fmt.Errorf("Nat remove error")
 	}
 
 	return nil
@@ -127,8 +172,26 @@ func processUpdate(event *client.Event, device *mikrotik.Device) error {
 		return err
 	}
 
+	if len(client.Nodes) == 0 {
+		return fmt.Errorf("Node is empty")
+	}
+
+	node := client.Nodes[0]
+
+	if node.Access == 0 {
+		return processRemove(event, device)
+	}
+
+	if node.Public == "" || node.Public == "0.0.0.0" {
+		node.Public = device.Host
+	}
+
+	nid := mikrotik.Nat{
+		Comment: fmt.Sprintf("%s", node.Name),
+	}
+
 	sid := mikrotik.Secret{
-		Name: fmt.Sprintf("Client:%d", client.ID),
+		Name: fmt.Sprintf("%s", node.Name),
 	}
 
 	qid := mikrotik.Queue{
@@ -137,16 +200,16 @@ func processUpdate(event *client.Event, device *mikrotik.Device) error {
 
 	q := mikrotik.Queue{
 		Name:    fmt.Sprintf("Client:%d", client.ID),
-		Target:  client.Nodes[0].IP,
-		Comment: fmt.Sprintf("%d:%d %s - %s ", client.ID, client.Nodes[0].ID, client.Name, client.Nodes[0].Name),
-		Limits:  fmt.Sprintf("%d/%d", client.Rate.Upceil, client.Rate.Downceil),
+		Target:  node.IP,
+		Comment: fmt.Sprintf("%d:%d %s - %s ", client.ID, node.ID, client.Name, node.Name),
+		Limits:  fmt.Sprintf("%dk/%dk", client.Rate.Upceil, client.Rate.Downceil),
 	}
 
 	s := mikrotik.Secret{
-		Name:     fmt.Sprintf("Client:%d", client.ID),
-		Password: client.Nodes[0].Passwd,
-		Address:  client.Nodes[0].IP,
-		Gateway:  client.Nodes[0].Gateway,
+		Name:     fmt.Sprintf("%s", node.Name),
+		Password: node.Passwd,
+		Address:  node.IP,
+		Gateway:  node.Gateway,
 		Comment:  fmt.Sprintf("%d: %s", client.ID, client.Name),
 	}
 
@@ -186,6 +249,38 @@ func processUpdate(event *client.Event, device *mikrotik.Device) error {
 		return fmt.Errorf("Secret set error")
 	}
 
+	ret, err = device.ExecuteEntity("print", nid)
+	if err != nil {
+		return fmt.Errorf("Secret get error")
+	}
+
+	if len(ret.Re) > 0 {
+		ret.Fetch(&nid)
+		if _, err := device.ExecuteEntity("remove", nid); err != nil {
+			return fmt.Errorf("Nat remove error")
+		}
+	}
+
+	var nat mikrotik.Nat
+	if node.Warning == 1 {
+		nat = mikrotik.Nat{
+			Action:     "dst-nat",
+			ToAddress:  device.Community,
+			SrcAddress: node.IP,
+			Chain:      "dstnat",
+			Comment:    fmt.Sprintf("%s", node.Name),
+		}
+	} else {
+		nat = mikrotik.Nat{
+			Action:     "src-nat",
+			ToAddress:  node.Public,
+			SrcAddress: node.IP,
+			Chain:      "srcnat",
+			Comment:    fmt.Sprintf("%s", node.Name),
+		}
+	}
+
+	_, err = device.ExecuteEntity("add", nat)
 	event.Finish = time.Now()
 	event.Status = "DONE"
 	event.Save()

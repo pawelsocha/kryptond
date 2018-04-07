@@ -9,6 +9,7 @@ type Entity interface {
 	Path() string
 	Where() string
 	GetId() string
+	PrintAttrs() string
 }
 
 type Queue struct {
@@ -79,5 +80,30 @@ func (a Arp) Path() string {
 }
 
 func (q Arp) PrintAttrs() string {
+	return ""
+}
+
+type Nat struct {
+	ID         string `routeros:".id"`
+	Action     string `routeros:"action"`
+	ToAddress  string `routeros:"to-addresses"`
+	SrcAddress string `routeros:"src-address"`
+	Chain      string `routeros:"chain"`
+	Comment    string `routeros:"comment"`
+}
+
+func (n Nat) GetId() string {
+	return n.ID
+}
+
+func (n Nat) Where() string {
+	return fmt.Sprintf("?comment=%s", n.Comment)
+}
+
+func (n Nat) Path() string {
+	return fmt.Sprintf("/ip/firewall/nat")
+}
+
+func (n Nat) PrintAttrs() string {
 	return ""
 }

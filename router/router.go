@@ -7,17 +7,19 @@ type Router struct {
 	Name           string `gorm:"column:name"`
 	PrivateAddress string `gorm:"column:priv"`
 	PublicAddress  string `gorm:"column:public"`
+	Community      string `gorm:"column:community"`
 }
 
 // GetRoutersList get from database list of a router to configure.
 // All router must be Konfiguracja/Configuration type
 func GetRoutersList() ([]Router, error) {
-	query := `SELECT n.name, 
-                     INET_NTOA(n.ipaddr) priv, 
-                     INET_NTOA(n.ipaddr_pub) public
-                FROM lms.netdevices nd 
-           LEFT JOIN nastypes t on (t.id=nd.nastype) 
-           LEFT JOIN vnodes n ON (n.netdev=nd.netnodeid) 
+	query := `SELECT n.name,
+                     INET_NTOA(n.ipaddr) priv,
+                     INET_NTOA(n.ipaddr_pub) public,
+                     community
+                FROM lms.netdevices nd
+           LEFT JOIN nastypes t on (t.id=nd.nastype)
+           LEFT JOIN vnodes n ON (n.netdev=nd.id)
                WHERE t.name='Konfiguracja'
                  AND n.ownerid=0`
 
