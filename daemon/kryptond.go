@@ -2,7 +2,6 @@ package daemon
 
 import (
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/pawelsocha/kryptond/client"
@@ -55,7 +54,6 @@ func Main() {
 			events, err := client.CheckEvents()
 			if err != nil {
 				Log.Critical("Can't get list of events. Error: ", err)
-				return
 			}
 
 			for _, event := range events {
@@ -83,12 +81,14 @@ func Main() {
 					err = processRemove(&event, device)
 				}
 				if err != nil {
-					log.Fatalf("Error processing %s. Client: %d, Host: %s, Error: %s",
+					Log.Errorf("Error processing %s. Client: %d, Host: %s, Error: %s",
 						event.Operation,
 						event.CustomerId,
 						host,
 						err,
 					)
+					event.Status = "ERR"
+					event.Save()
 				}
 			}
 		}
@@ -99,7 +99,6 @@ func processRemove(event *client.Event, device *mikrotik.Device) error {
 
 	client, err := client.NewClient(event.CustomerId)
 	if err != nil {
-		Log.Critical("Can't create new client. Error: ", err)
 		return err
 	}
 
@@ -168,7 +167,6 @@ func processUpdate(event *client.Event, device *mikrotik.Device) error {
 
 	client, err := client.NewClient(event.CustomerId)
 	if err != nil {
-		Log.Critical("Can't create new client. Error: ", err)
 		return err
 	}
 
@@ -261,23 +259,19 @@ func processUpdate(event *client.Event, device *mikrotik.Device) error {
 		}
 	}
 
-	var nat mikrotik.Nat
+	nat := mikrotik.Nat{
+		SrcAddress: node.IP,
+		Comment:    fmt.Sprintf("%s", node.Name),
+	}
+
 	if node.Warning == 1 {
-		nat = mikrotik.Nat{
-			Action:     "dst-nat",
-			ToAddress:  device.Community,
-			SrcAddress: node.IP,
-			Chain:      "dstnat",
-			Comment:    fmt.Sprintf("%s", node.Name),
-		}
+		nat.Action = "dst-nat"
+		nat.ToAddress = device.Community
+		nat.Chain = "dstnat"
 	} else {
-		nat = mikrotik.Nat{
-			Action:     "src-nat",
-			ToAddress:  node.Public,
-			SrcAddress: node.IP,
-			Chain:      "srcnat",
-			Comment:    fmt.Sprintf("%s", node.Name),
-		}
+		nat.Action = "src-nat"
+		nat.ToAddress = node.Public
+		nat.Chain = "srcnat"
 	}
 
 	_, err = device.ExecuteEntity("add", nat)

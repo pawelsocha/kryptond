@@ -71,7 +71,7 @@ func NewClient(CustomerID int64) (*Client, error) {
 	var rate Ratelimit
 	err := database.Connection.Raw(rateLimits, CustomerID).Find(&rate).Error
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Tarrif for client %d not found. %s", CustomerID, err)
 	}
 
 	if rate.Downceil == 0 {
@@ -85,7 +85,7 @@ func NewClient(CustomerID int64) (*Client, error) {
 	var clientNodes Nodes
 	err = database.Connection.Raw(nodes, CustomerID).Find(&clientNodes).Error
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Nodes for client %d not found. %s", CustomerID, err)
 	}
 
 	var name Name
