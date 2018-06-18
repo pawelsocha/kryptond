@@ -3,7 +3,6 @@ package daemon
 import (
 	"fmt"
 	"time"
-	"net"
 
 	"github.com/pawelsocha/kryptond/client"
 	"github.com/pawelsocha/kryptond/config"
@@ -88,9 +87,6 @@ func Main() {
 						host,
 						err,
 					)
-					Log.Errorf("Error processing %#v.",
-						err.(*net.OpError),
-					)
 					event.Status = "ERR"
 					event.Save()
 				}
@@ -154,8 +150,10 @@ func processRemove(event *client.Event, device *mikrotik.Device) error {
 	ret.Fetch(&nid)
 
 	if _, err := device.ExecuteEntity("remove", qid); err != nil {
-		Log.Errorf("Can't remove queue. Error: %s", err)
-		return err
+		if err.Error() != "Id is empty" {
+			Log.Errorf("Can't remove queue. Error: %s", err)
+			return err
+		}
 	}
 
 	if _, err := device.ExecuteEntity("remove", sid); err != nil {
