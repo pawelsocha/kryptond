@@ -20,30 +20,10 @@ type Device struct {
 }
 
 // NewDevice create routeros api client
-func NewDevice(host string) (*Device, error) {
-	var err error
+func NewDevice(host string) *Device {
 	mk := new(Device)
-
-	tlsConfig := tls.Config{}
-
-	if config.Cfg.Mikrotik.Insecure {
-		tlsConfig.InsecureSkipVerify = true
-	}
-
-	mk.Conn, err = routeros.DialTLSTimeout(
-		fmt.Sprintf("%s:8729", host),
-		config.Cfg.Mikrotik.Username,
-		config.Cfg.Mikrotik.Password,
-		&tlsConfig,
-		time.Second*5,
-	)
-
-	if err != nil {
-		return nil, err
-	}
-
 	mk.Host = host
-	return mk, nil
+	return mk
 }
 
 //Execute wrapper to routeros RunArgs command
@@ -51,10 +31,47 @@ func (device *Device) Execute(cmds ...string) (*routeros.Reply, error) {
 	return device.Conn.RunArgs(cmds)
 }
 
+//Connect - create connection with routeros
+func (device *Device) Connect() error {
+	tlsConfig := tls.Config{}
+
+	if config.Cfg.Mikrotik.Insecure {
+		tlsConfig.InsecureSkipVerify = true
+	}
+
+	conn, err := routeros.DialTLSTimeout(
+		fmt.Sprintf("%s:8729", device.Host),
+		config.Cfg.Mikrotik.Username,
+		config.Cfg.Mikrotik.Password,
+		&tlsConfig,
+		time.Second*5,
+	)
+
+	if err != nil {
+		return err
+	}
+	device.Conn = conn
+	return nil
+}
+
+//Disconnect - release the connetion
+func (device *Device) Disconnect() 	{
+	device.Conn.Close()
+}
+
+
 func (device *Device) ExecuteEntity(action string, entity Entity) (*routeros.Reply, error) {
 	var ret *routeros.Reply = nil
 	var err error
 
+	err = device.Connect()
+
+	if err != nil {
+		return ret, err
+	}
+
+	defer device.Disconnect()
+	
 	switch action {
 	case "print":
 		ret, err = device.Conn.Print(entity)

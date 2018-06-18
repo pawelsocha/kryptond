@@ -63,12 +63,17 @@ func Subscribe(ctx context.Context) {
 }
 
 func CheckEvents() (Events, error) {
-	var events Events
-	if err := database.Connection.Where("status = ?", "NEW").Where("customerid > 0").Find(&events).Error; err != nil {
+	err := database.Connection.Table("kryptond_events").Where("status <> ?", "DONE").Where("DATE_ADD(start, INTERVAL 12 HOUR) < NOW()").Updates(map[string]interface{}{"status": "EXPIRED"}).Error
+	if err != nil {
 		return nil, err
 	}
 
-	err := database.Connection.Table("kryptond_events").Where("status = ?", "NEW").Updates(map[string]interface{}{"status": "RUNNING"}).Error
+	var events Events
+	if err := database.Connection.Where("status IN (?)", []string{"NEW", "ERR"}).Where("customerid > 0").Find(&events).Error; err != nil {
+		return nil, err
+	}
+
+	err = database.Connection.Table("kryptond_events").Where("status = ?", "NEW").Updates(map[string]interface{}{"status": "RUNNING"}).Error
 	if err != nil {
 		return nil, err
 	}

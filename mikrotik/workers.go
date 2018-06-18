@@ -22,11 +22,7 @@ func (w *Workers) AddNewDevice(r router.Router) (*Device, error) {
 		ip = r.PublicAddress
 	}
 
-	device, err := NewDevice(ip)
-	if err != nil {
-		Log.Errorf("Can't create routeros device for host %s. Error: %s", ip, err)
-		return nil, err
-	}
+	device := NewDevice(ip)
 	device.Run()
 	device.Community = r.Community
 
@@ -50,6 +46,7 @@ func (w *Workers) GetDevice(host string) *Device {
 	if device, ok := w.Nodes[host]; ok {
 		return device
 	}
+
 	return nil
 }
 

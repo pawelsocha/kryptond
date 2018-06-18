@@ -3,6 +3,7 @@ package daemon
 import (
 	"fmt"
 	"time"
+	"net"
 
 	"github.com/pawelsocha/kryptond/client"
 	"github.com/pawelsocha/kryptond/config"
@@ -87,6 +88,9 @@ func Main() {
 						host,
 						err,
 					)
+					Log.Errorf("Error processing %#v.",
+						err.(*net.OpError),
+					)
 					event.Status = "ERR"
 					event.Save()
 				}
@@ -132,7 +136,8 @@ func processRemove(event *client.Event, device *mikrotik.Device) error {
 		if err.Error() == "Id is empty." {
 			return nil
 		}
-		return fmt.Errorf("Secret get error")
+		Log.Errorf("Can't get secret details during removing process. Error: %s", err)
+		return err
 	}
 
 	ret.Fetch(&sid)
@@ -142,21 +147,25 @@ func processRemove(event *client.Event, device *mikrotik.Device) error {
 		if err.Error() == "Id is empty." {
 			return nil
 		}
-		return fmt.Errorf("Nat get error")
+		Log.Errorf("Can't get ip>nat details during removing process. Error: %s", err)
+		return err
 	}
 
 	ret.Fetch(&nid)
 
 	if _, err := device.ExecuteEntity("remove", qid); err != nil {
-		return fmt.Errorf("Queue remove error")
+		Log.Errorf("Can't remove queue. Error: %s", err)
+		return err
 	}
 
 	if _, err := device.ExecuteEntity("remove", sid); err != nil {
-		return fmt.Errorf("Secret remove error")
+		Log.Errorf("Can't remove secret. Error: %s", err)
+		return err
 	}
 
 	if _, err := device.ExecuteEntity("remove", nid); err != nil {
-		return fmt.Errorf("Nat remove error")
+		Log.Errorf("Can't remove ip>nat. Error: %s", err)
+		return err
 	}
 
 	return nil
@@ -215,7 +224,8 @@ func processUpdate(event *client.Event, device *mikrotik.Device) error {
 	var action string
 
 	if err != nil {
-		return fmt.Errorf("Queue get error")
+		Log.Errorf("Can't get queue details. Error: %s", err)
+		return err
 	}
 
 	action = "add"
@@ -227,12 +237,14 @@ func processUpdate(event *client.Event, device *mikrotik.Device) error {
 
 	_, err = device.ExecuteEntity(action, q)
 	if err != nil {
-		return fmt.Errorf("Queue set error")
+		Log.Errorf("Can't set queue details. Error: %s", err)
+		return err
 	}
 
 	ret, err = device.ExecuteEntity("print", sid)
 	if err != nil {
-		return fmt.Errorf("Secret get error")
+		Log.Errorf("Can't get secret details. Error: %s", err)
+		return err
 	}
 
 	action = "add"
@@ -244,18 +256,21 @@ func processUpdate(event *client.Event, device *mikrotik.Device) error {
 
 	_, err = device.ExecuteEntity(action, s)
 	if err != nil {
-		return fmt.Errorf("Secret set error")
+		Log.Errorf("Can't set secret details. Error: %s", err)
+		return err
 	}
 
 	ret, err = device.ExecuteEntity("print", nid)
 	if err != nil {
-		return fmt.Errorf("Secret get error")
+		Log.Errorf("Can't get ip>nat details. Error: %s", err)
+		return err
 	}
 
 	if len(ret.Re) > 0 {
 		ret.Fetch(&nid)
 		if _, err := device.ExecuteEntity("remove", nid); err != nil {
-			return fmt.Errorf("Nat remove error")
+			Log.Errorf("Can't remove ip>nat. Error: %s", err)
+			return err
 		}
 	}
 
@@ -275,6 +290,10 @@ func processUpdate(event *client.Event, device *mikrotik.Device) error {
 	}
 
 	_, err = device.ExecuteEntity("add", nat)
+	if err != nil {
+		Log.Errorf("Can't add ip>nat details. Error: %s", err)
+		return err
+	}
 	event.Finish = time.Now()
 	event.Status = "DONE"
 	event.Save()
