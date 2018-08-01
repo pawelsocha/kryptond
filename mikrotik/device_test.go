@@ -115,3 +115,23 @@ func TestDeviceEdit(t *testing.T) {
 		}
 	}
 }
+
+func TestDeviceEditNoId(t *testing.T) {
+	//given
+	client := &ClientMock{}
+	entity := Queue{}
+
+	//when
+	device := NewDevice(client, "foo")
+	err := device.Edit(entity)
+
+	//then
+	//then
+	if err == nil {
+		t.Fatal("Remove should return error.")
+	}
+
+	if err.Error() != "Id is empty.\n" {
+		t.Fatalf("Expected error with message: 'Id is empty', got: %s\n", err)
+	}
+}
