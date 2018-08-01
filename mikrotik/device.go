@@ -1,28 +1,25 @@
 package mikrotik
 
 import (
-	"crypto/tls"
 	"fmt"
-	"time"
 
-	"github.com/pawelsocha/kryptond/config"
 	. "github.com/pawelsocha/kryptond/logging"
 	"github.com/pawelsocha/routeros"
 )
 
-// Device structure to describe a routeros api instance
 type Device struct {
 	Host      string
 	Community string
-	Conn      *routeros.Client
+	Conn      Client
 	Job       chan Task
 	done      chan bool
 }
 
 // NewDevice create routeros api client
-func NewDevice(host string) *Device {
+func NewDevice(client Client, host string) *Device {
 	mk := new(Device)
 	mk.Host = host
+	mk.Conn = client
 	return mk
 }
 
@@ -31,56 +28,26 @@ func (device *Device) Execute(cmds ...string) (*routeros.Reply, error) {
 	return device.Conn.RunArgs(cmds)
 }
 
-//Connect - create connection with routeros
-func (device *Device) Connect() error {
-	tlsConfig := tls.Config{}
-
-	if config.Cfg.Mikrotik.Insecure {
-		tlsConfig.InsecureSkipVerify = true
-	}
-
-	conn, err := routeros.DialTLSTimeout(
-		fmt.Sprintf("%s:8729", device.Host),
-		config.Cfg.Mikrotik.Username,
-		config.Cfg.Mikrotik.Password,
-		&tlsConfig,
-		time.Second*5,
-	)
-
-	if err != nil {
-		return err
-	}
-	device.Conn = conn
-	return nil
-}
-
 //Disconnect - release the connetion
-func (device *Device) Disconnect() 	{
+func (device *Device) Disconnect() {
 	device.Conn.Close()
 }
-
 
 func (device *Device) ExecuteEntity(action string, entity Entity) (*routeros.Reply, error) {
 	var ret *routeros.Reply = nil
 	var err error
 
-	err = device.Connect()
-
-	if err != nil {
-		return ret, err
-	}
-
 	defer device.Disconnect()
-	
+
 	switch action {
 	case "print":
-		ret, err = device.Conn.Print(entity)
+		ret, err = device.Print(entity)
 	case "remove":
-		err = device.Conn.Remove(entity)
+		err = device.Remove(entity)
 	case "add":
-		err = device.Conn.Add(entity)
+		err = device.Add(entity)
 	case "edit":
-		err = device.Conn.Edit(entity)
+		err = device.Edit(entity)
 	default:
 		err = fmt.Errorf("Uknown action %s", action)
 	}
@@ -124,6 +91,62 @@ func (device *Device) Run() {
 //Task return task channel
 func (device *Device) TaskChan() chan Task {
 	return device.Job
+}
+
+func (device *Device) Print(i Entity) (*routeros.Reply, error) {
+	sentence := []string{
+		fmt.Sprintf("%s/print", i.Path()),
+	}
+
+	attrs := i.PrintAttrs()
+	if attrs != "" {
+		sentence = append(sentence, attrs)
+	}
+
+	where := i.Where()
+	if where != "" {
+		sentence = append(sentence, where)
+	}
+
+	plist := PropertyList(i)
+	if plist != "" {
+		sentence = append(sentence, "=.proplist="+plist)
+	}
+
+	return device.Conn.RunArgs(sentence)
+}
+
+func (device *Device) Remove(i Entity) error {
+	id := i.GetId()
+	if id == "" {
+		return fmt.Errorf("Id is empty.\n")
+	}
+
+	sentence := []string{
+		fmt.Sprintf("%s/remove", i.Path()),
+		fmt.Sprintf("=.id=%s", id),
+	}
+	_, err := device.Conn.RunArgs(sentence)
+	return err
+}
+
+func (device *Device) Edit(i Entity) error {
+	id := i.GetId()
+	if id == "" {
+		return fmt.Errorf("Id is empty.\n")
+	}
+	sentence := []string{
+		fmt.Sprintf("%s/set", i.Path()),
+	}
+
+	sentence = append(sentence, ValueList(i)...)
+
+	_, err := device.Conn.RunArgs(sentence)
+	return err
+}
+
+func (device *Device) Add(i Entity) error {
+	return nil
 }
 
 //Stop async client

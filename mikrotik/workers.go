@@ -1,8 +1,14 @@
 package mikrotik
 
 import (
+	"crypto/tls"
+	"fmt"
+	"time"
+
+	"github.com/pawelsocha/kryptond/config"
 	. "github.com/pawelsocha/kryptond/logging"
 	"github.com/pawelsocha/kryptond/router"
+	"github.com/pawelsocha/routeros"
 )
 
 type Workers struct {
@@ -22,7 +28,25 @@ func (w *Workers) AddNewDevice(r router.Router) (*Device, error) {
 		ip = r.PublicAddress
 	}
 
-	device := NewDevice(ip)
+	tlsConfig := tls.Config{}
+
+	if config.Cfg.Mikrotik.Insecure {
+		tlsConfig.InsecureSkipVerify = true
+	}
+
+	conn, err := routeros.DialTLSTimeout(
+		fmt.Sprintf("%s:8729", ip),
+		config.Cfg.Mikrotik.Username,
+		config.Cfg.Mikrotik.Password,
+		&tlsConfig,
+		time.Second*5,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	device := NewDevice(conn, ip)
 	device.Run()
 	device.Community = r.Community
 

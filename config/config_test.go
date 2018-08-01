@@ -57,7 +57,7 @@ func TestReadConfig(t *testing.T) {
 		t.Fatalf("Config read error. Mikrotik workers is %d should be 8", c.Mikrotik.Workers)
 	}
 	if c.Mikrotik.Insecure != true {
-		t.Fatalf("Config read error. Mikrotik insecure is %b should be true", c.Mikrotik.Insecure)
+		t.Fatalf("Config read error. Mikrotik insecure is %v should be true", c.Mikrotik.Insecure)
 	}
 	if c.Mikrotik.Username != "test" {
 		t.Fatalf("Config read error. Mikrotik user is %s should be test", c.Mikrotik.Username)

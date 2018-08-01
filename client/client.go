@@ -101,10 +101,10 @@ func NewClient(CustomerID int64) (*Client, error) {
 
 //String convert client struct to string
 func (c Client) String() string {
-	return fmt.Sprint("Client%s", c.ID)
+	return fmt.Sprintf("Client%d", c.ID)
 }
 
 //Description returns client description for comment field in routeros
 func (c Client) Description() string {
-	return fmt.Sprint("Client:%s:%s", c.ID, c.Name)
+	return fmt.Sprintf("Client:%d:%s", c.ID, c.Name)
 }

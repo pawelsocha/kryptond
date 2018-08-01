@@ -1,6 +1,10 @@
 package mikrotik
 
-import "fmt"
+import (
+	"fmt"
+	"reflect"
+	"strings"
+)
 
 //TODO: move to separate file
 
@@ -10,6 +14,47 @@ type Entity interface {
 	Where() string
 	GetId() string
 	PrintAttrs() string
+}
+
+func PropertyList(obj interface{}) string {
+	var proplist []string
+	var typ reflect.Type
+
+	if reflect.TypeOf(obj).Kind() == reflect.Ptr {
+		typ = reflect.ValueOf(obj).Elem().Type()
+	} else {
+		typ = reflect.TypeOf(obj)
+	}
+
+	for i := 0; i < typ.NumField(); i++ {
+		p := typ.Field(i).Tag.Get("routeros")
+		if p == "" {
+			continue
+		}
+
+		proplist = append(proplist, p)
+	}
+
+	return strings.Join(proplist, ",")
+}
+
+func ValueList(obj interface{}) []string {
+	var values []string
+	elem := reflect.ValueOf(obj)
+	typ := elem.Type()
+	for i := 0; i < elem.NumField(); i++ {
+		p := elem.Field(i)
+		switch p.Type().Name() {
+		case "string":
+			if p.Interface() != "" {
+				values = append(
+					values,
+					fmt.Sprintf("=%s=%s", typ.Field(i).Tag.Get("routeros"), p.Interface()),
+				)
+			}
+		}
+	}
+	return values
 }
 
 type Queue struct {
