@@ -33,6 +33,7 @@ func (device *Device) Disconnect() {
 	device.Conn.Close()
 }
 
+//ExecuteEntity - perform the mikrotik action on speficic entitity.
 func (device *Device) ExecuteEntity(action string, entity Entity) (*routeros.Reply, error) {
 	var ret *routeros.Reply = nil
 	var err error
@@ -49,11 +50,11 @@ func (device *Device) ExecuteEntity(action string, entity Entity) (*routeros.Rep
 	case "edit":
 		err = device.Edit(entity)
 	default:
-		err = fmt.Errorf("Uknown action %s", action)
+		err = fmt.Errorf("unknown action %s", action)
 	}
 
 	if err != nil {
-		Log.Errorf("Can't execute %#v on %s. Error: %s", entity, device.Host, err)
+		Log.Errorf("can't execute %#v on %s. Error: %s", entity, device.Host, err)
 	}
 
 	return ret, err
@@ -146,7 +147,15 @@ func (device *Device) Edit(i Entity) error {
 }
 
 func (device *Device) Add(i Entity) error {
-	return nil
+	sentence := []string{
+		fmt.Sprintf("%s/add", i.Path()),
+	}
+
+	sentence = append(sentence, ValueList(i)...)
+
+	_, err := device.Conn.RunArgs(sentence)
+	return err
+
 }
 
 //Stop async client

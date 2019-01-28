@@ -14,6 +14,7 @@ type Entity interface {
 	Where() string
 	GetId() string
 	PrintAttrs() string
+	Copy() Entity
 }
 
 func PropertyList(obj interface{}) string {
@@ -81,6 +82,10 @@ func (q Queue) PrintAttrs() string {
 	return ""
 }
 
+func (q Queue) Copy() Entity {
+	return q
+}
+
 type Secret struct {
 	ID       string `routeros:".id"`
 	Name     string `routeros:"name"`
@@ -107,6 +112,10 @@ func (q Secret) PrintAttrs() string {
 	return ""
 }
 
+func (q Secret) Copy() Entity {
+	return q
+}
+
 type Arp struct {
 	Mac     string `routeros:"mac-address"`
 	Address string `routeros:"address"`
@@ -124,8 +133,12 @@ func (a Arp) Path() string {
 	return fmt.Sprintf("/ip/arp")
 }
 
-func (q Arp) PrintAttrs() string {
+func (a Arp) PrintAttrs() string {
 	return ""
+}
+
+func (a Arp) Copy() Entity {
+	return a
 }
 
 type Nat struct {
@@ -151,4 +164,8 @@ func (n Nat) Path() string {
 
 func (n Nat) PrintAttrs() string {
 	return ""
+}
+
+func (n Nat) Copy() Entity {
+	return n
 }

@@ -181,6 +181,7 @@ func processUpdate(event *client.Event, device *mikrotik.Device) error {
 		return fmt.Errorf("Node is empty")
 	}
 
+	//here for for client nodes
 	node := client.Nodes[0]
 
 	if node.Access == 0 {

@@ -126,12 +126,45 @@ func TestDeviceEditNoId(t *testing.T) {
 	err := device.Edit(entity)
 
 	//then
-	//then
 	if err == nil {
 		t.Fatal("Remove should return error.")
 	}
 
 	if err.Error() != "Id is empty.\n" {
 		t.Fatalf("Expected error with message: 'Id is empty', got: %s\n", err)
+	}
+}
+
+func TestDeviceAdd(t *testing.T) {
+	//given
+	client := &ClientMock{}
+	entity := Queue{
+		Name:    "test",
+		Target:  "1.2.3.4/5",
+		Comment: "foobar",
+		Limits:  "123/456",
+	}
+
+	sentences := []string{
+		"/queue/simple/add",
+		"=name=test",
+		"=target=1.2.3.4/5",
+		"=comment=foobar",
+		"=max-limit=123/456",
+	}
+
+	//when
+	device := NewDevice(client, "foo")
+	device.Add(entity)
+
+	//then
+	if len(client.Sentece) != len(sentences) {
+		t.Fatalf("Invalid number of elements in sentence. Expected: %d, got: %d\n", len(sentences), len(client.Sentece))
+	}
+
+	for i, v := range sentences {
+		if client.Sentece[i] != v {
+			t.Fatalf("Incorrect sentence. Expected %s, got: %s\n", v, client.Sentece[i])
+		}
 	}
 }
